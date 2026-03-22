@@ -54,7 +54,7 @@ Each item in `routes` has:
 
 ## Screenshot
 
-![WSDOT Display](./docs/wsdot-display.png)
+![WSDOT Display](./docs/board-display.png)
 
 ## Future
 
