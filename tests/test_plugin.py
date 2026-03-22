@@ -211,7 +211,7 @@ class TestWsdotDataVariables:
         assert result.available and result.data
 
         manifest = _load_manifest()
-        simple = set(manifest.get("variables", {}).get("simple", []))
+        simple = set(manifest.get("variables", {}).get("simple", {}).keys())
         for var in simple:
             assert var in result.data, f"Variable '{var}' declared in manifest but not in data"
 
@@ -591,3 +591,54 @@ class TestWsdotFetchDataEdgeCases:
         plugin._sailing_space = {1: {"DepartingSpaces": []}}
         result = plugin._get_drive_up_space_for_terminal(1, "/Date(123)/", "invalid")
         assert result == ""
+
+
+class TestManifestMetadata:
+    """Validate rich variable metadata in manifest.json."""
+
+    def test_manifest_has_required_fields(self):
+        m = _load_manifest()
+        for field in ("id", "name", "version", "variables"):
+            assert field in m, f"Missing required field: {field}"
+
+    def test_simple_variables_have_rich_metadata(self):
+        m = _load_manifest()
+        simple = m["variables"]["simple"]
+        assert isinstance(simple, dict), "simple should be a dict, not a list"
+        required_keys = {"description", "type", "max_length"}
+        for var_name, meta in simple.items():
+            assert isinstance(meta, dict), f"{var_name} metadata should be a dict"
+            missing = required_keys - meta.keys()
+            assert not missing, f"{var_name} missing keys: {missing}"
+
+    def test_simple_variables_have_groups(self):
+        m = _load_manifest()
+        groups = m["variables"].get("groups", {})
+        assert groups, "variables.groups must be defined"
+        simple = m["variables"]["simple"]
+        for var_name, meta in simple.items():
+            grp = meta.get("group")
+            assert grp in groups, f"{var_name} group '{grp}' not in groups"
+
+    def test_simple_variables_have_examples(self):
+        m = _load_manifest()
+        simple = m["variables"]["simple"]
+        for var_name, meta in simple.items():
+            assert "example" in meta, f"{var_name} missing 'example'"
+            assert meta["example"], f"{var_name} example must be non-empty"
+
+    def test_arrays_preserved(self):
+        m = _load_manifest()
+        arrays = m["variables"].get("arrays", {})
+        assert "routes" in arrays
+        assert "alerts" in arrays
+        assert arrays["routes"]["label_field"] == "route_name"
+        assert arrays["alerts"]["label_field"] == "headline"
+
+    def test_max_lengths_for_arrays(self):
+        m = _load_manifest()
+        ml = m.get("max_lengths", {})
+        assert "routes.*.route_name" in ml
+        assert "alerts.*.headline" in ml
+        assert "routes.*.departures_ab.*.scheduled_time" in ml
+        assert "routes.*.departures_ba.*.vessel_name" in ml
