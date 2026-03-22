@@ -12,38 +12,114 @@
   "settings_schema": {
     "type": "object",
     "properties": {
-      "enabled": {"type": "boolean", "title": "Enable WSDOT Ferries", "default": false},
-      "api_access_code": {"type": "string", "title": "WSDOT API Access Code", "description": "Free code from https://www.wsdot.wa.gov/traffic/api/", "ui:widget": "password"},
-      "routes": {
-        "type": "array", "title": "Ferry Routes", "description": "Select the ferry routes you want to monitor.", "maxItems": 4, "ui:widget": "wsdot-route-picker",
-        "items": {"type": "object", "properties": {"route_id": {"type": "integer", "title": "Route ID"}}, "required": ["route_id"]}
+      "enabled": {
+        "type": "boolean",
+        "title": "Enable WSDOT Ferries",
+        "default": false
       },
-      "refresh_seconds": {"type": "integer", "title": "Refresh Interval (seconds)", "default": 120, "minimum": 60}
+      "api_access_code": {
+        "type": "string",
+        "title": "WSDOT API Access Code",
+        "description": "Free code from https://www.wsdot.wa.gov/traffic/api/",
+        "ui:widget": "password"
+      },
+      "routes": {
+        "type": "array",
+        "title": "Ferry Routes",
+        "description": "Select the ferry routes you want to monitor.",
+        "maxItems": 4,
+        "ui:widget": "wsdot-route-picker",
+        "items": {
+          "type": "object",
+          "properties": {
+            "route_id": {
+              "type": "integer",
+              "title": "Route ID"
+            }
+          },
+          "required": [
+            "route_id"
+          ]
+        }
+      },
+      "refresh_seconds": {
+        "type": "integer",
+        "title": "Refresh Interval (seconds)",
+        "default": 120,
+        "minimum": 60
+      }
     },
-    "required": ["api_access_code", "routes"]
+    "required": [
+      "api_access_code",
+      "routes"
+    ]
   },
   "env_vars": [
-    {"name": "WSDOT_API_ACCESS_CODE", "required": false, "description": "WSDOT API access code (can override UI)"}
+    {
+      "name": "WSDOT_API_ACCESS_CODE",
+      "required": false,
+      "description": "WSDOT API access code (can override UI)"
+    }
   ],
   "variables": {
     "groups": {
-      "overview": {"label": "Overview"},
-      "display": {"label": "Display"}
+      "overview": {
+        "label": "Overview"
+      },
+      "display": {
+        "label": "Display"
+      }
     },
     "simple": {
-      "formatted": {"description": "Pre-formatted ferry schedule display", "type": "string", "max_length": 22, "group": "display", "example": "Bainbridge 4:20p"},
-      "headers": {"description": "Column headers for display", "type": "string", "max_length": 22, "group": "display", "example": "ROUTE  DEPART  SPOTS"},
-      "route_count": {"description": "Number of monitored ferry routes", "type": "number", "max_length": 1, "group": "overview", "example": "2"},
-      "has_alerts": {"description": "Whether any active alerts exist", "type": "boolean", "max_length": 3, "group": "overview", "example": "Yes"}
+      "formatted": {
+        "description": "Pre-formatted ferry schedule display",
+        "type": "string",
+        "max_length": 22,
+        "group": "display",
+        "example": "Bainbridge 4:20p"
+      },
+      "headers": {
+        "description": "Column headers for display",
+        "type": "string",
+        "max_length": 22,
+        "group": "display",
+        "example": "ROUTE  DEPART  SPOTS"
+      },
+      "route_count": {
+        "description": "Number of monitored ferry routes",
+        "type": "number",
+        "max_length": 1,
+        "group": "overview",
+        "example": "2"
+      },
+      "has_alerts": {
+        "description": "Whether any active alerts exist",
+        "type": "boolean",
+        "max_length": 3,
+        "group": "overview",
+        "example": "Yes"
+      }
     },
     "arrays": {
       "routes": {
         "label_field": "route_name",
-        "item_fields": ["route_name", "route_id", "formatted", "headers", "departures_ab", "departures_ba", "wait_time_minutes", "alerts"]
+        "item_fields": [
+          "route_name",
+          "route_id",
+          "formatted",
+          "headers",
+          "departures_ab",
+          "departures_ba",
+          "wait_time_minutes",
+          "alerts"
+        ]
       },
       "alerts": {
         "label_field": "headline",
-        "item_fields": ["headline", "alert_text"]
+        "item_fields": [
+          "headline",
+          "alert_text"
+        ]
       }
     }
   },
@@ -64,8 +140,22 @@
     "has_alerts": {
       "type": "match",
       "description": "Color when alerts active",
-      "default_rules": [{"condition": "==", "value": true, "color": "yellow"}]
+      "default_rules": [
+        {
+          "condition": "==",
+          "value": true,
+          "color": "yellow"
+        }
+      ]
     }
   },
-  "fiestaboard_version": ">=2.10.0"
+  "fiestaboard_version": ">=2.10.0",
+  "screenshots": [
+    {
+      "src": "docs/board-display.png",
+      "alt": "WSDOT displayed on a Vestaboard",
+      "caption": "Washington State Ferries: schedules, vessel names, car spots, and alerts",
+      "primary": true
+    }
+  ]
 }
