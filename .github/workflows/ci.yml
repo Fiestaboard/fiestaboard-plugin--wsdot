@@ -37,4 +37,8 @@ jobs:
           PYTHONPATH: "fiestaboard-core:${{ github.workspace }}:fiestaboard-core/plugins"
           BOARD_READ_WRITE_KEY: test_key
         run: |
+          cat > .coveragerc << 'RCEOF'
+          [run]
+          omit = fiestaboard-core/*
+          RCEOF
           pytest tests/ -v --cov=. --cov-report=term-missing --cov-fail-under=80 --ignore=fiestaboard-core
