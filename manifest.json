@@ -1,7 +1,7 @@
 {
   "id": "wsdot",
   "name": "WSDOT",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Washington State Ferries: schedules, vessel names, car spots, and alerts",
   "author": "FiestaBoard Team",
   "repository": "https://github.com/Fiestaboard/fiestaboard-plugin--wsdot",
@@ -157,5 +157,43 @@
       "caption": "Washington State Ferries: schedules, vessel names, car spots, and alerts",
       "primary": true
     }
-  ]
+  ],
+  "demo": {
+    "name": "WSDOT Ferries Demo",
+    "device_type": "flagship",
+    "template": [
+      "Ferry Schedule",
+      "{{wsdot.headers}}",
+      "{{wsdot.formatted}}",
+      "",
+      "",
+      "Routes {{wsdot.route_count}}"
+    ],
+    "line_metadata": [
+      {
+        "alignment": "center",
+        "wrap": false
+      },
+      {
+        "alignment": "left",
+        "wrap": false
+      },
+      {
+        "alignment": "left",
+        "wrap": true
+      },
+      {
+        "alignment": "left",
+        "wrap": false
+      },
+      {
+        "alignment": "left",
+        "wrap": false
+      },
+      {
+        "alignment": "center",
+        "wrap": false
+      }
+    ]
+  }
 }
