@@ -32,6 +32,13 @@ jobs:
               assert field in m, f'Missing required field: {field}'
           print('manifest.json is valid')
           "
+      - name: Set up plugin directory structure
+        run: |
+          PLUGIN_ID=$(python -c "import json; print(json.load(open('manifest.json'))['id'])")
+          mkdir -p plugins
+          ln -s .. "plugins/$PLUGIN_ID"
+          ln -s . "$PLUGIN_ID"
+
       - name: Run tests
         env:
           PYTHONPATH: "fiestaboard-core:${{ github.workspace }}:fiestaboard-core/plugins"
