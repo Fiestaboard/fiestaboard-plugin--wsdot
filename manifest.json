@@ -1,7 +1,7 @@
 {
   "id": "wsdot",
   "name": "WSDOT",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Washington State Ferries: schedules, vessel names, car spots, and alerts",
   "author": "FiestaBoard Team",
   "repository": "https://github.com/Fiestaboard/fiestaboard-plugin--wsdot",
