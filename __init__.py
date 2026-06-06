@@ -182,7 +182,7 @@ class WsdotPlugin(PluginBase):
             vid = _get(item, "VesselID", "vesselId")
             name = _get(item, "VesselName", "vesselName") or _get(item, "Abbrev", "abbrev")
             if vid is not None and name:
-                self._vessel_names[int(vid)] = str(name)[:12]
+                self._vessel_names[int(vid)] = str(name)
         return self._vessel_names
 
     def _fetch_terminal_sailing_space(self) -> None:
@@ -323,8 +323,8 @@ class WsdotPlugin(PluginBase):
             headline = _get(item, "Headline", "headline") or _get(item, "AlertFullTitle", "alertFullTitle") or "Alert"
             body = _get(item, "AlertFullDescription", "alertFullDescription") or _get(item, "Description", "description") or ""
             out.append({
-                "headline": str(headline)[:22],
-                "alert_text": str(body)[:22] if body else str(headline)[:22],
+                "headline": str(headline),
+                "alert_text": str(body) if body else str(headline),
             })
         return out
 
@@ -392,7 +392,7 @@ class WsdotPlugin(PluginBase):
             dep = {
                 "scheduled_time": scheduled_time[:5],
                 "actual_time": actual_time[:5] if actual_time else "",
-                "vessel_name": vessel_name[:12],
+                "vessel_name": vessel_name,
                 "spots_remaining": spots[:3],
             }
             direction = _get(s, "Direction", "direction")
@@ -414,7 +414,7 @@ class WsdotPlugin(PluginBase):
             for wt in self._wait_times.values():
                 m = _get(wt, "WaitTimeMinutes", "waitTimeMinutes") or _get(wt, "CurrentWaitTime", "currentWaitTime")
                 if m is not None:
-                    wait_min = str(m)[:2]
+                    wait_min = str(m)
                     break
 
         # Build abbreviated formatted line for board (≤22 chars, like sports plugin)
@@ -428,7 +428,7 @@ class WsdotPlugin(PluginBase):
 
         return {
             "route_id": route_id,
-            "route_name": route_name[:22],
+            "route_name": route_name,
             "formatted": formatted,
             "headers": FORMATTED_HEADERS,
             "departures_ab": departures_ab[:6],
@@ -484,7 +484,7 @@ class WsdotPlugin(PluginBase):
                 abbrev = ROUTE_ABBREVS.get(route_id, ROUTE_NAMES.get(route_id, f"R{route_id}")[:8])[:8]
                 routes_data.append({
                     "route_id": route_id,
-                    "route_name": ROUTE_NAMES.get(route_id, f"Route {route_id}")[:22],
+                    "route_name": ROUTE_NAMES.get(route_id, f"Route {route_id}"),
                     "formatted": f"{abbrev} No data"[:22],
                     "headers": FORMATTED_HEADERS,
                     "departures_ab": [],
