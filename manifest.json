@@ -158,6 +158,28 @@
       "primary": true
     }
   ],
+  "teaser": "FERRY 2 ROUTES",
+  "previews": [
+    {
+      "device_type": "flagship",
+      "rows": [
+        "{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}",
+        " SEATTLE - BAINBRIDGE",
+        "  NEXT DEP  3:30 PM",
+        "  VESSEL MV WENATCHEE",
+        "  CAR SPACES  45/120",
+        "{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}{67}"
+      ]
+    },
+    {
+      "device_type": "note",
+      "rows": [
+        "FERRY SCHEDULE",
+        "Bainbridge",
+        "2 ROUTES"
+      ]
+    }
+  ],
   "demo": {
     "flagship": {
       "name": "WSDOT Ferries Demo",
