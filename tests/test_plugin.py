@@ -642,3 +642,72 @@ class TestManifestMetadata:
         assert "alerts.*.headline" in ml
         assert "routes.*.departures_ab.*.scheduled_time" in ml
         assert "routes.*.departures_ba.*.vessel_name" in ml
+
+
+class TestRouteSettingsSchema:
+    """The ferry route options are plugin domain data and must live in the
+    manifest, not in FiestaBoard core's settings form.
+
+    The schema describes the picker declaratively (a JSON-Schema ``enum`` with
+    ``enumNames`` labels) so core renders it with its generic array/enum
+    fields. Core checks ``ui:widget`` before falling back to those generic
+    fields, so the custom widget name must be absent for the generic path to
+    win.
+    """
+
+    @staticmethod
+    def _routes_schema():
+        return _load_manifest()["settings_schema"]["properties"]["routes"]
+
+    def test_routes_declares_no_custom_ui_widget(self):
+        assert "ui:widget" not in self._routes_schema(), (
+            "routes must not request a core-side bespoke widget; the enum "
+            "below is enough for core's generic array/enum rendering"
+        )
+
+    def test_route_id_declares_every_supported_route_as_an_enum(self):
+        from plugins.wsdot import ROUTE_NAMES
+
+        route_id = self._routes_schema()["items"]["properties"]["route_id"]
+        assert route_id.get("enum") == sorted(ROUTE_NAMES), (
+            "the selectable route ids must match the routes the plugin can "
+            "actually fetch"
+        )
+
+    def test_route_id_labels_are_aligned_with_the_enum(self):
+        route_id = self._routes_schema()["items"]["properties"]["route_id"]
+        names = route_id.get("enumNames")
+        assert names, "enumNames must supply the human-readable labels"
+        assert len(names) == len(route_id["enum"]), (
+            "enumNames must line up 1:1 with enum, since core pairs them by index"
+        )
+        assert all(isinstance(n, str) and n.strip() for n in names)
+
+    def test_route_id_is_labelled_for_humans(self):
+        """Core renders ``items.properties.<key>.title`` above each Select, so
+        the title is now user-visible copy rather than an internal id."""
+        route_id = self._routes_schema()["items"]["properties"]["route_id"]
+        assert route_id["title"] == "Route"
+
+    def test_stored_shape_is_unchanged_for_existing_installs(self):
+        """Backward compatibility: stored config is ``[{"route_id": N}, ...]``.
+
+        Changing ``items`` away from an object with a ``route_id`` property
+        would orphan every existing user's saved routes.
+        """
+        schema = self._routes_schema()
+        assert schema["type"] == "array"
+        items = schema["items"]
+        assert items["type"] == "object"
+        assert items["required"] == ["route_id"]
+        assert items["properties"]["route_id"]["type"] == "integer"
+
+    def test_existing_stored_config_still_validates(self):
+        plugin = _plugin()
+        errors = plugin.validate_config(
+            {"api_access_code": "x", "routes": [{"route_id": 1}, {"route_id": 7}]}
+        )
+        assert errors == []
+
+    def test_route_limit_is_still_declared(self):
+        assert self._routes_schema()["maxItems"] == 4

@@ -1,7 +1,7 @@
 {
   "id": "wsdot",
   "name": "WSDOT",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Washington State Ferries: schedules, vessel names, car spots, and alerts",
   "author": "FiestaBoard Team",
   "repository": "https://github.com/Fiestaboard/fiestaboard-plugin--wsdot",
@@ -28,13 +28,34 @@
         "title": "Ferry Routes",
         "description": "Select the ferry routes you want to monitor.",
         "maxItems": 4,
-        "ui:widget": "wsdot-route-picker",
         "items": {
           "type": "object",
           "properties": {
             "route_id": {
               "type": "integer",
-              "title": "Route ID"
+              "title": "Route",
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9
+              ],
+              "enumNames": [
+                "Seattle – Bainbridge Island",
+                "Seattle – Bremerton",
+                "Fauntleroy – Vashon – Southworth",
+                "Point Defiance – Tahlequah",
+                "Anacortes – San Juan Islands",
+                "Anacortes – Sidney B.C.",
+                "Mukilteo – Clinton",
+                "Port Townsend – Keystone",
+                "Edmonds – Kingston"
+              ]
             }
           },
           "required": [

@@ -53,7 +53,7 @@ In the FiestaBoard web UI:
 2. Click **Configure**.
 3. Enter your **WSDOT API Access Code** (from step 1).
 4. Add one or more **Ferry Routes**:
-   - For each route, set **Route ID** to one of the numbers in the table (e.g. `7` for Mukilteo–Clinton).
+   - For each entry, pick a **Route** by name from the dropdown (e.g. *Mukilteo – Clinton*). The route IDs in the table below are what get stored.
 5. Optionally set **Refresh Interval** (default 120 seconds; minimum 60).
 6. Click **Save Changes**.
 
