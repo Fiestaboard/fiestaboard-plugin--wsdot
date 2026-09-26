@@ -1,7 +1,7 @@
 {
   "id": "wsdot",
   "name": "WSDOT",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Washington State Ferries: schedules, vessel names, car spots, and alerts",
   "author": "FiestaBoard Team",
   "repository": "https://github.com/Fiestaboard/fiestaboard-plugin--wsdot",
@@ -93,18 +93,18 @@
     },
     "simple": {
       "formatted": {
-        "description": "Pre-formatted ferry schedule display",
+        "description": "Pre-formatted ferry schedule display, sized to the board it's rendered on (up to 120 tiles on the widest note_array panel)",
         "type": "string",
-        "max_length": 22,
+        "max_length": 120,
         "group": "display",
         "example": "Bainbridge 4:20p"
       },
       "headers": {
         "description": "Column headers for display",
         "type": "string",
-        "max_length": 22,
+        "max_length": 16,
         "group": "display",
-        "example": "ROUTE  DEPART  SPOTS"
+        "example": "Route Time Spots"
       },
       "route_count": {
         "description": "Number of monitored ferry routes",
@@ -145,9 +145,9 @@
     }
   },
   "max_lengths": {
-    "routes.*.route_name": 22,
-    "routes.*.formatted": 22,
-    "routes.*.headers": 22,
+    "routes.*.route_name": 28,
+    "routes.*.formatted": 120,
+    "routes.*.headers": 16,
     "routes.*.departures_ab.*.scheduled_time": 5,
     "routes.*.departures_ab.*.vessel_name": 12,
     "routes.*.departures_ab.*.spots_remaining": 3,
@@ -198,6 +198,17 @@
         "{66}{66} WSDOT FERRY",
         "BAINBRIDGE",
         "NEXT 2:45 PM"
+      ]
+    },
+    {
+      "label": "Note Array (2 wide)",
+      "device_type": "note_array",
+      "notes_wide": 2,
+      "notes_tall": 1,
+      "rows": [
+        "  SEATTLE-BAINBRIDGE FERRY",
+        "      NEXT DEP  3:30 PM",
+        "   VESSEL MV WENATCHEE"
       ]
     }
   ],

@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from src.devices import BoardContext
 from src.plugins.base import PluginBase, PluginResult
 
 logger = logging.getLogger(__name__)
@@ -37,10 +38,42 @@ ROUTE_NAMES: Dict[int, str] = {
     9: "Edmonds-Kingston",
 }
 
-# Header line describing formatted fields (Route, Time, Spots) for display above data
-FORMATTED_HEADERS = "Route Time Spots"[:22]
+# Board geometry defaults. self.board is None outside a board-scoped render
+# (unit tests, legacy callers); the documented contract is to assume a
+# Flagship (22x6) rather than crash. These are the ONLY board-dimension
+# literals in this file -- everything on a layout path derives from _dims().
+DEFAULT_BOARD_ROWS = 6
+DEFAULT_BOARD_COLS = 22
 
-# Short abbreviations for board display (≤22 chars per line). Max ~8 chars for route.
+# Widest board FiestaBoard supports: an 8-wide note array (8 * NOTE_COLS).
+# Used only to size the manifest's max_lengths honestly -- never as a layout
+# literal.
+MAX_BOARD_COLS = 120
+
+# Header line describing formatted fields (Route, Time, Spots) for display
+# above data. Natural length is 16 tiles; _format_headers() shrinks it for a
+# narrower board and never pads it wider than that.
+HEADERS_TEXT = "Route Time Spots"
+
+# Alert text/headlines come from the live WSDOT API with no length contract,
+# so it is truncated at the boundary to match what the manifest declares
+# rather than leaving it unbounded.
+MAX_ALERT_TEXT_LENGTH = 22
+
+
+def _dims(board: Optional[BoardContext]) -> "tuple[int, int]":
+    """Return (rows, cols) for *board*, defaulting to a Flagship when unbound."""
+    if board is None:
+        return DEFAULT_BOARD_ROWS, DEFAULT_BOARD_COLS
+    return board.rows, board.cols
+
+
+def _format_headers(cols: int) -> str:
+    """Column header line, shrunk to fit a narrower board, never padded wider."""
+    return HEADERS_TEXT[:cols]
+
+
+# Short abbreviations for board display. Max ~8 chars for route.
 ROUTE_ABBREVS: Dict[int, str] = {
     1: "Sea-Bain",
     2: "Sea-Brem",
@@ -109,7 +142,7 @@ def _format_route_line(
     route_id: int,
     scheduled_time: str,
     spots_remaining: str,
-    max_len: int = 22,
+    max_len: int,
 ) -> str:
     """Build one abbreviated line for the board (route + time + spots)."""
     route_abbrev = ROUTE_ABBREVS.get(route_id, ROUTE_NAMES.get(route_id, f"R{route_id}")[:8])
@@ -130,7 +163,9 @@ class WsdotPlugin(PluginBase):
 
     def __init__(self, manifest: Dict[str, Any]):
         super().__init__(manifest)
-        self._cache: Optional[Dict[str, Any]] = None
+        # Keyed by board geometry (see _cache_key_for_board) -- a Flagship's
+        # frame must never be served to a Note or a note_array's render.
+        self._cache: Dict[str, Dict[str, Any]] = {}
         self._vessel_names: Dict[int, str] = {}
         self._sailing_space: Dict[int, Any] = {}
         self._wait_times: Dict[int, Any] = {}
@@ -138,6 +173,20 @@ class WsdotPlugin(PluginBase):
     @property
     def plugin_id(self) -> str:
         return "wsdot"
+
+    @staticmethod
+    def _cache_key_for_board(board: Optional[BoardContext]) -> str:
+        """Cache key for *board*: device_type, or dimensions for a note_array.
+
+        note_array boards all share device_type "note_array" but vary in
+        size, so their dimensions are folded into the key -- otherwise a
+        1x4 array's frame could be served to an 8x8 array's render.
+        """
+        if board is None:
+            return "_default"
+        if board.device_type == "note_array":
+            return f"note_array:{board.cols}x{board.rows}"
+        return board.device_type
 
     def _get_access_code(self) -> Optional[str]:
         code = self.config.get("api_access_code")
@@ -323,8 +372,8 @@ class WsdotPlugin(PluginBase):
             headline = _get(item, "Headline", "headline") or _get(item, "AlertFullTitle", "alertFullTitle") or "Alert"
             body = _get(item, "AlertFullDescription", "alertFullDescription") or _get(item, "Description", "description") or ""
             out.append({
-                "headline": str(headline),
-                "alert_text": str(body) if body else str(headline),
+                "headline": str(headline)[:MAX_ALERT_TEXT_LENGTH],
+                "alert_text": (str(body) if body else str(headline))[:MAX_ALERT_TEXT_LENGTH],
             })
         return out
 
@@ -417,22 +466,33 @@ class WsdotPlugin(PluginBase):
                     wait_min = str(m)
                     break
 
-        # Build abbreviated formatted line for board (≤22 chars, like sports plugin)
+        # Board geometry for this render (self.board is bound by get_data()
+        # around fetch_data(), so it reflects whichever board is currently
+        # being rendered -- Flagship, Note, or a note_array of any size).
+        rows, cols = _dims(self.board)
+
+        # Build abbreviated formatted line for board, sized to the actual
+        # board rendering right now rather than a hardcoded Flagship width.
         next_dep = (departures_ab or departures_ba or [{}])[0]
         formatted = _format_route_line(
             route_id=route_id,
             scheduled_time=next_dep.get("scheduled_time") or "",
             spots_remaining=next_dep.get("spots_remaining") or "",
-            max_len=22,
+            max_len=cols,
         )
+
+        # Stored departures are not capped at a fixed count -- a taller
+        # board reflows into more departure rows (see _build_formatted_lines),
+        # so the cap scales with board.rows instead of staying fixed at 6.
+        dep_cap = max(rows, 6)
 
         return {
             "route_id": route_id,
             "route_name": route_name,
             "formatted": formatted,
-            "headers": FORMATTED_HEADERS,
-            "departures_ab": departures_ab[:6],
-            "departures_ba": departures_ba[:6],
+            "headers": _format_headers(cols),
+            "departures_ab": departures_ab[:dep_cap],
+            "departures_ba": departures_ba[:dep_cap],
             "wait_time_minutes": wait_min,
             "alerts": [],
         }
@@ -470,6 +530,8 @@ class WsdotPlugin(PluginBase):
             logger.exception("WSF API error during fetch")
             return PluginResult(available=False, error=str(e))
 
+        _, cols = _dims(self.board)
+
         routes_data: List[Dict[str, Any]] = []
         for r in routes_config:
             route_id = r.get("route_id")
@@ -485,8 +547,8 @@ class WsdotPlugin(PluginBase):
                 routes_data.append({
                     "route_id": route_id,
                     "route_name": ROUTE_NAMES.get(route_id, f"Route {route_id}"),
-                    "formatted": f"{abbrev} No data"[:22],
-                    "headers": FORMATTED_HEADERS,
+                    "formatted": f"{abbrev} No data"[:cols],
+                    "headers": _format_headers(cols),
                     "departures_ab": [],
                     "departures_ba": [],
                     "wait_time_minutes": "",
@@ -505,38 +567,89 @@ class WsdotPlugin(PluginBase):
         data: Dict[str, Any] = {
             "route_count": len(routes_data),
             "has_alerts": bool(alerts_list),
-            "headers": FORMATTED_HEADERS,
+            "headers": _format_headers(cols),
             "routes": routes_data,
             "alerts": alerts_list,
         }
         primary = routes_data[0]
-        data["formatted"] = primary.get("formatted", "WSF")[:22]
+        data["formatted"] = primary.get("formatted", "WSF")[:cols]
 
-        lines = self._build_formatted_lines(data)
-        self._cache = data
+        lines = self._build_formatted_lines(data, self.board)
+        self._cache[self._cache_key_for_board(self.board)] = data
         return PluginResult(available=True, data=data, formatted_lines=lines)
 
-    def _build_formatted_lines(self, data: Dict[str, Any]) -> List[str]:
-        """Build 6-line default display."""
-        lines: List[str] = []
-        lines.append("WSF FERRIES".center(22))
-        for route in data.get("routes", [])[:3]:
-            lines.append(route.get("formatted", "")[:22])
-        if data.get("has_alerts"):
-            lines.append("Alerts active".ljust(22))
-        while len(lines) < 6:
+    def _build_formatted_lines(
+        self, data: Dict[str, Any], board: Optional[BoardContext] = None
+    ) -> List[str]:
+        """Build the whole-board display, reflowed to *board*'s geometry.
+
+        One row goes to the title and, when alerts are active, one to the
+        alert indicator; everything else is spent on departure lines, taken
+        round-robin across the configured routes so a taller board shows
+        more sailings per route rather than one route hogging every row.
+        """
+        rows, cols = _dims(board)
+        title = "WSF FERRIES"
+        lines: List[str] = [title[:cols].center(cols)]
+
+        has_alerts = bool(data.get("has_alerts"))
+        budget = max(rows - 1 - (1 if has_alerts else 0), 0)
+
+        routes = data.get("routes") or []
+        # Per route: one line per known departure, built fresh from the
+        # departure data at this board's width; a route with no departure
+        # detail (e.g. the API had nothing) falls back to its single
+        # pre-built summary line.
+        per_route_lines: List[List[str]] = []
+        for route in routes:
+            route_id = route.get("route_id")
+            deps = list(route.get("departures_ab") or []) + list(route.get("departures_ba") or [])
+            if deps:
+                per_route_lines.append([
+                    _format_route_line(
+                        route_id=route_id,
+                        scheduled_time=dep.get("scheduled_time") or "",
+                        spots_remaining=dep.get("spots_remaining") or "",
+                        max_len=cols,
+                    )
+                    for dep in deps
+                ])
+            else:
+                per_route_lines.append([(route.get("formatted") or "")[:cols]])
+
+        added = 0
+        progressed = True
+        indices = [0] * len(per_route_lines)
+        while added < budget and progressed:
+            progressed = False
+            for i, route_lines in enumerate(per_route_lines):
+                if added >= budget:
+                    break
+                if indices[i] < len(route_lines):
+                    lines.append(route_lines[indices[i]])
+                    indices[i] += 1
+                    added += 1
+                    progressed = True
+
+        if has_alerts:
+            lines.append("Alerts active".ljust(cols)[:cols])
+
+        while len(lines) < rows:
             lines.append("")
-        return lines[:6]
+        return lines[:rows]
 
     def get_formatted_display(self) -> Optional[List[str]]:
-        if not self._cache:
+        key = self._cache_key_for_board(self.board)
+        cached = self._cache.get(key)
+        if cached is None:
             result = self.fetch_data()
             if not result.available:
                 return None
-        return self._build_formatted_lines(self._cache or {})
+            cached = self._cache.get(key)
+        return self._build_formatted_lines(cached or {}, self.board)
 
     def cleanup(self) -> None:
-        self._cache = None
+        self._cache = {}
         self._vessel_names = {}
         self._sailing_space = {}
         self._wait_times = {}
