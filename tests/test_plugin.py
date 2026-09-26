@@ -386,10 +386,10 @@ class TestWsdotCleanup:
 
     def test_cleanup_clears_cache(self):
         plugin = _plugin()
-        plugin._cache = {"routes": []}
+        plugin._cache = {"_default": {"routes": []}}
         plugin._vessel_names = {1: "X"}
         plugin.cleanup()
-        assert plugin._cache is None
+        assert plugin._cache == {}
         assert plugin._vessel_names == {}
 
 
@@ -490,15 +490,19 @@ class TestWsdotFetchDataEdgeCases:
         assert result.available
 
     def test_get_formatted_display_with_cache(self):
-        """Test get_formatted_display with cached data."""
+        """Test get_formatted_display with cached data, keyed by board (None -> "_default")."""
         plugin = _plugin()
         plugin._cache = {
-            "routes": [
-                {
-                    "route_id": 9,
-                    "formatted": "Route 9 --"
-                }
-            ]
+            "_default": {
+                "routes": [
+                    {
+                        "route_id": 9,
+                        "formatted": "Route 9 --",
+                        "departures_ab": [],
+                        "departures_ba": [],
+                    }
+                ]
+            }
         }
         lines = plugin.get_formatted_display()
         assert lines is not None
@@ -507,7 +511,7 @@ class TestWsdotFetchDataEdgeCases:
     def test_get_formatted_display_no_cache(self):
         """Test get_formatted_display without cache."""
         plugin = _plugin()
-        plugin._cache = None
+        plugin._cache = {}
         plugin.config = {}
         lines = plugin.get_formatted_display()
         assert lines is None
