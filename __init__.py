@@ -176,17 +176,28 @@ class WsdotPlugin(PluginBase):
 
     @staticmethod
     def _cache_key_for_board(board: Optional[BoardContext]) -> str:
-        """Cache key for *board*: device_type, or dimensions for a note_array.
+        """Cache key for *board*'s shape and display.
 
-        note_array boards all share device_type "note_array" but vary in
-        size, so their dimensions are folded into the key -- otherwise a
-        1x4 array's frame could be served to an 8x8 array's render.
+        Mirrors ``PluginBase._cache_key``. Flagship and Note have fixed sizes,
+        so their device_type is a sufficient key. Every other family varies in
+        size under one device_type -- note arrays, and LED/TV boards, which
+        are all "panel" -- so the dimensions are folded in: otherwise a 16x10
+        Pixoo and a 22x9 TV panel share one entry, and a board whose grid
+        changes at runtime (a larger text size) is served output laid out for
+        its old size. Two boards of one size can still draw differently
+        (split-flap vs LED), so the display's key is appended when core
+        provides one; ``getattr`` keeps this working on cores whose
+        BoardContext has no ``display``.
         """
         if board is None:
             return "_default"
-        if board.device_type == "note_array":
-            return f"note_array:{board.cols}x{board.rows}"
-        return board.device_type
+        if board.device_type in ("flagship", "note"):
+            key = board.device_type
+        else:
+            key = f"{board.device_type}:{board.cols}x{board.rows}"
+        display = getattr(board, "display", None)
+        display_key = getattr(display, "key", None)
+        return f"{key}|{display_key}" if display_key else key
 
     def _get_access_code(self) -> Optional[str]:
         code = self.config.get("api_access_code")
